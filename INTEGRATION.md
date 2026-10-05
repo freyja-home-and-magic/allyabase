@@ -71,7 +71,9 @@ Set `LOCALHOST=true` when running against a local/dev stack (docker-compose, or 
 | julia | — | 3000 | P2P messaging, key coordination |
 | dolores | — | 3007 | Social feeds, media, video |
 | minnie | — | 2525 | Transactional email (proxies Resend) |
-| prof | — | 3008 | Profile management (binary image storage — different persistence shape than the rest, see below) |
+| prof | — | 3008 | The user's own profile: encrypted at rest, readable only by the key that wrote it, so it can never back discovery |
+| savage | — | 3012 | Renders a public BDO record's `svg` field as a shareable webpage at a pre-signed URL (own repo) |
+| eumachia | — | 3013 | Interactive Stripe pay pages and the payment/payout record for invoices (own repo) |
 
 ## Writing Resilient Integration Code
 
@@ -212,6 +214,32 @@ Deeper per-service `magic-spells.js` test suites also exist in `sharon/tests/*/m
 `homeventory/website.js` (in `planet-nine/third-party/homeventory`) is a working, minimal example of a client app integrating with BDO: registering an identity, persisting keys, and syncing data — including the Netlify-specific fixes described above already applied. It's a good starting point to copy from.
 
 savage's `src/server/node/savage.js` (extracted to its own repo; was `deployment/savage/`) is a different kind of reference: a persistence-free service bundled *alongside* allyabase's own services rather than a client consuming them from outside — good starting point for "small transform in front of an existing service" rather than "full client with its own identity." Its `scripts/smoke-test.mjs` and `scripts/test-sanitize.mjs` are also worth a look as examples of testing a bundled service end-to-end, including an adversarial test (a malicious SVG payload) that proves sanitization actually works rather than just asserting a 200 status.
+
+## HomeFront Apps: Where to Go Next
+
+Everything above is written from the Node side. The HomeFront apps (BizBuz, LinkityLink, getpayed, idothis) consume allyabase differently enough that this guide is only the starting point for them. They are Tauri 2 iOS apps with **Rust clients** (`bdo-rs`, the instance-based `sessionless` crate) and no server of their own, so the `LOCALHOST`/subdomain convention and the serverless sections above don't apply. This section is a bridge: it names what differs and points at where each piece is written down, rather than repeating it.
+
+**What differs from the Node pattern**
+
+- **Addressing.** Hosted bases are one hostname per base (`prod.8as.world`, `dev.8as.world`, per-state `<state>.8as.world`) with nginx routing `/<service>/` to each service's port, not a subdomain per service.
+- **The base is chosen at build time.** Each app has `src-tauri/bases.json` with one entry per base; `build.rs` bakes exactly one into the binary, a test asserts every service URL names the same host, and `build-ios.cjs` checks the finished IPA. Release builds are always prod. BizBuz is the exception: its base is pinned per install from the state on the user's first card.
+- **One keypair per published record**, not one per app: BDO's public slot is keyed by pubKey, so a single identity would let every card or invoice overwrite the others.
+- **A uuid belongs to the base that minted it.** Read against another base, BDO answers `{"bdo": null}` rather than an error. Cached uuids are namespaced by base host.
+- **Cross-app state lives on the device,** in the iOS App Group `group.club.home.front` (the Canonical Profile under `canonical.profile`), not in any service.
+
+**Where the details live**
+
+| Topic | Read |
+|---|---|
+| The cross-app contracts: identity, uuid scoping, BDO vs prof, savage sanitizing, the Canonical Profile, payout pairs, the money path, shared build facts | `allyabase/CLAUDE.md` → "How the apps and services fit together" |
+| Family overview, per-app status, brand rules | `homefront/CLAUDE.md` |
+| Business cards: per-state base pinning, BDO + savage publishing | `bizbuz/CLAUDE.md` |
+| Link-in-bio: BDO + savage publishing, link import | `linkitylink/CLAUDE.md` |
+| Invoices: BDO + addie + eumachia, Stripe Connect onboarding, payout reporting | `getpayed/CLAUDE.md` |
+| Local services directory: shared BDO records, prof profile backup | `idothis/CLAUDE.md` |
+| Services they depend on | `bdo/`, `addie/`, `prof/`, `savage/`, `eumachia/` (each repo's `CLAUDE.md`) |
+
+These are sibling checkouts, not paths inside this repo, and where they live varies by machine. If one isn't where you expect, ask the user for its location rather than guessing.
 
 ## Known Issues Worth Knowing About
 
