@@ -273,14 +273,20 @@ proceeds by referral activity doesn't.
   addie's `POST /platform/payout`, signed by the platform admin key, from
   the platform's own Stripe balance (Apple's money doesn't pass through
   Stripe, so top it up first).
-- **Who can earn:** only invite cards carrying a payout destination, which
-  the apps write once the user has connected Stripe in GetPayed (section 6).
+- **Card pages count too:** savage's page for an ordinary BizBuz or
+  LinkityLink card can carry a "Make your own" button through the same
+  counter (`SAVAGE_GET_APP_CTA=on`), crediting the card's owner within the
+  same cap.
+- **Who can earn:** only cards (invite or ordinary) carrying a payout
+  destination, which the apps write once the program is live and the user
+  has connected Stripe in GetPayed (section 6).
 - **Switch:** `GETPAYED_APP_STORE_URL` in each app's `lib.rs`. It's `None`
   until GetPayed is on the App Store, and the share screen and invite cards
   behave as before. Setting it turns on the prompt, the stats, and the
   routing of invite buttons through savage. It also bumps the invite card
   design, so cards already shared are rewritten. Deploy savage and addie
-  before shipping app versions with it set.
+  before shipping app versions with it set, and turn on
+  `SAVAGE_GET_APP_CTA` at the same time.
 - **Before launch:** a referral terms page (half of proceeds, $50 cap,
   monthly, can end) and a privacy-policy line about counting invite taps,
   both on homeventory.club.
