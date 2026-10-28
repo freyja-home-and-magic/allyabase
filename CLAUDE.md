@@ -254,42 +254,47 @@ Also: `NSPrivacyAccessedAPICategoryUserDefaults` needs reason `1C8F.1` (App
 Group access) or the upload fails with ITMS-91053, and an empty reasons array
 is what triggers it.
 
-### 12. The referral program pays from a pool, not per sale (October 2026)
+### 12. The payment pool pays on nineum, not per sale (October 2026)
 
-BizBuz and LinkityLink share half of each month's App Store proceeds with
-the people whose invite cards get tapped, by tap count, up to $50 a person.
-A per-sale commission isn't possible: nothing carries a link through the App
-Store to the install, and Apple's campaign links only report totals. Paying
-for raw installs would also look like the "incentivized" ranking
-manipulation Apple's guidelines threaten expulsion for; sharing sale
-proceeds by referral activity doesn't.
+`getpayed/PAYMENT_POOL.md` is the spec. Useful actions earn the person
+behind them nineum in HomeVentory's own Fount galaxy, and after each month
+half of what Apple paid for the apps is shared by the nineum minted that
+month. A per-sale commission isn't possible (nothing carries a link through
+the App Store to the install) and paying for raw installs would look like
+the "incentivized" ranking manipulation Apple threatens expulsion for.
 
-- **Counting:** the invite card's button goes through savage's `/r/:uuid`,
-  which counts one tap per visitor per card per day (no link-preview bots)
-  and redirects to the App Store. Its data is savage's
-  `data/referrals/`. **Back it up**; it's the record of who is owed what.
-- **Paying:** savage's `scripts/referral-payouts.mjs`, once a month with
-  each app's proceeds from App Store Connect, dry run first. It pays through
-  addie's `POST /platform/payout`, signed by the platform admin key, from
-  the platform's own Stripe balance (Apple's money doesn't pass through
-  Stripe, so top it up first).
-- **Card pages count too:** savage's page for an ordinary BizBuz or
-  LinkityLink card can carry a "Make your own" button through the same
-  counter (`SAVAGE_GET_APP_CTA=on`), crediting the card's owner within the
-  same cap.
-- **Who can earn:** only cards (invite or ordinary) carrying a payout
-  destination, which the apps write once the program is live and the user
-  has connected Stripe in GetPayed (section 6).
-- **Switch:** `GETPAYED_APP_STORE_URL` in each app's `lib.rs`. It's `None`
-  until GetPayed is on the App Store, and the share screen and invite cards
-  behave as before. Setting it turns on the prompt, the stats, and the
-  routing of invite buttons through savage. It also bumps the invite card
-  design, so cards already shared are rewritten. Deploy savage and addie
-  before shipping app versions with it set, and turn on
-  `SAVAGE_GET_APP_CTA` at the same time.
-- **Before launch:** a referral terms page (half of proceeds, $50 cap,
-  monthly, can end) and a privacy-policy line about counting invite taps,
-  both on homeventory.club.
+- **One identity per person:** every HomeFront app shares a sessionless
+  identity through the keychain group `PCUFMY9NKZ.club.home.front`
+  (`tauri-plugin-identity-keychain`, copied into each app; one identity per
+  allyabase service, `fount` first). Apps register it with savage's pool
+  (`join_pool`), and cards carry it as `fount: { pubKey }`.
+- **What earns, one nineum each:** App Store taps (`/r/:uuid`) and views of
+  BizBuz and Linkitylink card pages (once per visitor per card per day, no
+  bots), the owner's own shares (once per card a day), and GetPayed invoices
+  paid (reported by eumachia once the payout is sent, crediting the sender).
+  No referral-of-referral credit, ever: that's MLM territory.
+- **Minting:** savage's own Fount user mints in HomeVentory's galaxy, where
+  the nineum's period byte is the month (fount `PERIOD_GALAXIES`). Fount's
+  default galaxy 28880014 is open to anyone and must not be used.
+- **Paying:** savage's `npm run pool-payouts`, monthly, dry run first: 50%
+  of total proceeds, shared by nineum among people who registered a payout
+  destination (GetPayed's Addie identity, signed by the shared identity),
+  capped at the average share plus two standard deviations, with what the
+  cap frees shared among the rest. Through addie's `POST /platform/payout`
+  from the platform's Stripe balance (top it up first: Apple's money
+  doesn't pass through Stripe).
+- **Data:** savage's `SAVAGE_DATA_DIR/pool/`. **Back it up**; it's the
+  record of who is owed what.
+- **Setup and deploy:** savage/CLAUDE.md "The payment pool" and its
+  `npm run pool-setup`.
+- **Still behind switches:** the invite card's button only goes through
+  `/r/` once `GETPAYED_APP_STORE_URL` is set in each app's `lib.rs`, and
+  card pages only show "Make your own" with `SAVAGE_GET_APP_CTA=on`.
+  Views, shares and paid invoices earn as soon as the apps and services
+  are deployed; nothing is paid until someone runs pool-payouts.
+- **Before launch:** a terms page (the pool, the cap, monthly, can end, the
+  right not to pay) and a privacy-policy line about counting views and
+  taps, both on homeventory.club.
 
 ### Where the details live
 
